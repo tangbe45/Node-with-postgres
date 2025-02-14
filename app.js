@@ -1,11 +1,9 @@
 const express = require("express");
-const database = require("./services/database");
 
 const app = express();
 app.use(express.json());
 
-app.get("/", (req, res) => {
-  res.status(200).json({ message: "This is your responds" });
-});
+app.use("/categories", require("./routes/catagories_routes"));
+app.use("/products", require("./routes/products_routes"));
 
 app.listen(3001, () => console.log("Server running on port 3001"));
