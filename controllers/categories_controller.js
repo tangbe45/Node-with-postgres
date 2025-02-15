@@ -5,9 +5,7 @@ exports.getAllCategories = async (req, res) => {
     const result = await database.pool.query("SELECT * FROM categories;");
     return res.status(200).json(result.rows);
   } catch (error) {
-    return res
-      .status(500)
-      .json({ severity: error.severity, name: error.name, code: error.code });
+    return res.status(500).json({ error: error.message });
   }
 };
 
@@ -15,7 +13,7 @@ exports.createCategory = async (req, res) => {
   try {
     const { name } = req.body;
     if (!name) {
-      return res.status(422).json({ message: "Name is required" });
+      return res.status(422).json({ error: "Name is required" });
     }
 
     const existsResult = await database.pool.query({
@@ -24,9 +22,7 @@ exports.createCategory = async (req, res) => {
     });
 
     if (existsResult.rows[0].exists) {
-      return res
-        .status(409)
-        .json({ message: `Category ${name} already exist` });
+      return res.status(409).json({ error: `Category ${name} already exist` });
     }
 
     const result = await database.pool.query({
@@ -36,11 +32,7 @@ exports.createCategory = async (req, res) => {
     return res.status(201).json(result.rows[0]);
   } catch (error) {
     return res.status(500).json({
-      severity: error.severity,
-      name: error.name,
-      code: error.code,
-      message: error.message,
-      detail: error.detail,
+      error: error.message,
     });
   }
 };
@@ -50,7 +42,7 @@ exports.updateCategory = async (req, res) => {
     const { name } = req.body;
 
     if (!name) {
-      return res.status(422).json({ message: "Name is required" });
+      return res.status(422).json({ error: "Name is required" });
     } else {
       const existsResult = await database.pool.query({
         text: "SELECT EXISTS( SELECT * FROM categories WHERE name = $1)",
@@ -60,7 +52,7 @@ exports.updateCategory = async (req, res) => {
       if (existsResult.rows[0].exists) {
         return res
           .status(409)
-          .json({ message: `Category ${name} already exist` });
+          .json({ error: `Category ${name} already exist` });
       }
     }
 
@@ -74,17 +66,43 @@ exports.updateCategory = async (req, res) => {
     });
 
     if (!result.rowCount) {
-      return res.status(404).json({ message: "Category not found" });
+      return res.status(404).json({ error: "Category not found" });
     }
 
     return res.status(200).json(result.rows[0]);
   } catch (error) {
     return res.status(500).json({
-      severity: error.severity,
-      name: error.name,
-      code: error.code,
-      message: error.message,
-      detail: error.detail,
+      error: error.message,
+    });
+  }
+};
+
+exports.deleteCategory = async (req, res) => {
+  try {
+    let { id } = req.params;
+
+    const countResult = await database.pool.query({
+      text: `SELECT COUNT(*) FROM products WHERE category_id = $1`,
+      values: [id],
+    });
+
+    if (countResult.rows[0].count > 0) {
+      return res.status(409).send({ error: "This Category is in used" });
+    }
+
+    const result = await database.pool.query({
+      text: `DELETE FROM categories WHERE id = $1`,
+      values: [id],
+    });
+
+    if (!result.rowCount) {
+      return res.status(404).json({ error: "Category not found" });
+    }
+
+    return res.status(204).send();
+  } catch (error) {
+    return res.status(500).json({
+      error: error.message,
     });
   }
 };
