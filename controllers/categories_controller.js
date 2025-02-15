@@ -44,3 +44,47 @@ exports.createCategory = async (req, res) => {
     });
   }
 };
+
+exports.updateCategory = async (req, res) => {
+  try {
+    const { name } = req.body;
+
+    if (!name) {
+      return res.status(422).json({ message: "Name is required" });
+    } else {
+      const existsResult = await database.pool.query({
+        text: "SELECT EXISTS( SELECT * FROM categories WHERE name = $1)",
+        values: [name],
+      });
+
+      if (existsResult.rows[0].exists) {
+        return res
+          .status(409)
+          .json({ message: `Category ${name} already exist` });
+      }
+    }
+
+    const result = await database.pool.query({
+      text: `
+      UPDATE categories
+      SET name = $1, updated_date = CURRENT_TIMESTAMP
+      WHERE id = $2
+      RETURNING *`,
+      values: [name, req.params.id],
+    });
+
+    if (!result.rowCount) {
+      return res.status(404).json({ message: "Category not found" });
+    }
+
+    return res.status(200).json(result.rows[0]);
+  } catch (error) {
+    return res.status(500).json({
+      severity: error.severity,
+      name: error.name,
+      code: error.code,
+      message: error.message,
+      detail: error.detail,
+    });
+  }
+};
