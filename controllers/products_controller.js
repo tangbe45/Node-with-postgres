@@ -141,3 +141,24 @@ exports.updateProduct = async (req, res) => {
     });
   }
 };
+
+exports.deleteProduct = async (req, res) => {
+  try {
+    let { id } = req.params;
+
+    const result = await database.pool.query({
+      text: `DELETE FROM products WHERE id = $1`,
+      values: [id],
+    });
+
+    if (!result.rowCount) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    return res.status(204).send();
+  } catch (error) {
+    return res.status(500).json({
+      error: error.message,
+    });
+  }
+};
